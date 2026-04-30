@@ -37,6 +37,14 @@ export default function ShareRoom() {
   const [uploading, setUploading] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
   const [textCopied, setTextCopied] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{
+    loaded: number;
+    total: number;
+    speed: number;
+    eta: number;
+    fileCount: number;
+  } | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/${roomId}` : `/share/${roomId}`;
 
@@ -96,24 +104,82 @@ export default function ShareRoom() {
   const uploadAndSend = async (files: FileList | null) => {
     if (!files || files.length === 0 || !socketRef.current || !connected) return;
     setUploading(true);
-    try {
-      const formData = new FormData();
-      Array.from(files).forEach((f) => formData.append("files", f));
 
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      const { files: uploaded } = await res.json() as { files: FileInfo[] };
+    const fileArray = Array.from(files);
+    const totalBytes = fileArray.reduce((sum, f) => sum + f.size, 0);
+    setUploadProgress({ loaded: 0, total: totalBytes, speed: 0, eta: 0, fileCount: fileArray.length });
+
+    const formData = new FormData();
+    fileArray.forEach((f) => formData.append("files", f));
+
+    try {
+      const uploaded = await new Promise<FileInfo[]>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
+
+        let lastTime = Date.now();
+        let lastLoaded = 0;
+        let smoothedSpeed = 0;
+
+        xhr.upload.addEventListener("progress", (e) => {
+          if (!e.lengthComputable) return;
+          const now = Date.now();
+          const dt = (now - lastTime) / 1000;
+          if (dt >= 0.25) {
+            const instantSpeed = (e.loaded - lastLoaded) / dt;
+            smoothedSpeed = smoothedSpeed === 0
+              ? instantSpeed
+              : smoothedSpeed * 0.7 + instantSpeed * 0.3;
+            lastTime = now;
+            lastLoaded = e.loaded;
+          }
+          const eta = smoothedSpeed > 0 ? (e.total - e.loaded) / smoothedSpeed : 0;
+          setUploadProgress({
+            loaded: e.loaded,
+            total: e.total,
+            speed: smoothedSpeed,
+            eta,
+            fileCount: fileArray.length,
+          });
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const parsed = JSON.parse(xhr.responseText) as { files: FileInfo[] };
+              resolve(parsed.files);
+            } catch {
+              reject(new Error("Invalid response"));
+            }
+          } else {
+            reject(new Error(`Upload failed (${xhr.status})`));
+          }
+        });
+
+        xhr.addEventListener("error", () => reject(new Error("Network error")));
+        xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
+
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
+      });
 
       socketRef.current.emit("send-data", {
         roomId,
         data: { type: "file", files: uploaded },
       });
-    } catch {
-      alert("File upload failed. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "File upload failed";
+      if (msg !== "Upload cancelled") alert(msg);
     } finally {
+      xhrRef.current = null;
       setUploading(false);
+      setUploadProgress(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const cancelUpload = () => {
+    if (xhrRef.current) xhrRef.current.abort();
   };
 
   const clearRoom = () => {
@@ -141,6 +207,22 @@ export default function ShareRoom() {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
     return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  };
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (!bytesPerSec || bytesPerSec < 1) return "—";
+    if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+    return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+  };
+
+  const formatEta = (seconds: number) => {
+    if (!seconds || !isFinite(seconds) || seconds <= 0) return "—";
+    if (seconds < 60) return `${Math.ceil(seconds)}s`;
+    const m = Math.floor(seconds / 60);
+    const s = Math.ceil(seconds % 60);
+    if (m < 60) return `${m}m ${s}s`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
   };
 
   return (
@@ -225,21 +307,62 @@ export default function ShareRoom() {
                 className="hidden"
                 onChange={(e) => uploadAndSend(e.target.files)}
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!connected || uploading}
-                className="w-full flex flex-col items-center gap-2 border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed group"
-              >
-                {uploading ? (
-                  <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                ) : (
+              {uploading && uploadProgress ? (
+                <div className="w-full border-2 border-dashed border-primary/40 rounded-lg p-4 flex flex-col gap-3 bg-primary/5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+                      <span className="text-xs font-mono text-foreground truncate">
+                        Uploading {uploadProgress.fileCount} file{uploadProgress.fileCount !== 1 ? "s" : ""}…
+                      </span>
+                    </div>
+                    <button
+                      onClick={cancelUpload}
+                      className="text-xs font-mono text-destructive hover:text-destructive/80 flex items-center gap-1 shrink-0"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border/50">
+                    <div
+                      className="h-full bg-primary transition-all duration-150 ease-out"
+                      style={{
+                        width: `${uploadProgress.total > 0 ? (uploadProgress.loaded / uploadProgress.total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
+                    <span>
+                      {formatSize(uploadProgress.loaded)} / {formatSize(uploadProgress.total)}
+                    </span>
+                    <span className="text-foreground">
+                      {uploadProgress.total > 0
+                        ? `${((uploadProgress.loaded / uploadProgress.total) * 100).toFixed(1)}%`
+                        : "0%"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono text-muted-foreground/80">
+                    <span>{formatSpeed(uploadProgress.speed)}</span>
+                    <span>ETA {formatEta(uploadProgress.eta)}</span>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!connected || uploading}
+                  className="w-full flex flex-col items-center gap-2 border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed group"
+                >
                   <Upload className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                )}
-                <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-                  {uploading ? "Uploading…" : "Click to upload files"}
-                </span>
-                <span className="text-xs font-mono text-muted-foreground/60">Any type · Up to 10 GB</span>
-              </button>
+                  <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+                    Click to upload files
+                  </span>
+                  <span className="text-xs font-mono text-muted-foreground/60">Any type · Up to 10 GB</span>
+                </button>
+              )}
             </div>
           </div>
 
