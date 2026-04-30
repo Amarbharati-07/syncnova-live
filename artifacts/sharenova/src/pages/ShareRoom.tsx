@@ -136,10 +136,12 @@ export default function ShareRoom() {
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const formatSize = (bytes: number) =>
-    bytes < 1024 * 1024
-      ? `${(bytes / 1024).toFixed(1)} KB`
-      : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
@@ -236,7 +238,7 @@ export default function ShareRoom() {
                 <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors">
                   {uploading ? "Uploading…" : "Click to upload files"}
                 </span>
-                <span className="text-xs font-mono text-muted-foreground/60">Any type · Up to 50 MB</span>
+                <span className="text-xs font-mono text-muted-foreground/60">Any type · Up to 10 GB</span>
               </button>
             </div>
           </div>
