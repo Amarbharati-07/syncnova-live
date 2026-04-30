@@ -58,6 +58,9 @@ export default function ShareRoom() {
     updatedAt: number;
   }
   const [incomingUploads, setIncomingUploads] = useState<Record<string, IncomingUpload>>({});
+  const [typingPeers, setTypingPeers] = useState<Record<string, number>>({});
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingSentRef = useRef<{ value: boolean; at: number }>({ value: false, at: 0 });
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/${roomId}` : `/share/${roomId}`;
 
@@ -87,6 +90,20 @@ export default function ShareRoom() {
     socket.on("room-cleared", () => {
       setUpdates([]);
       setIncomingUploads({});
+      setTypingPeers({});
+    });
+
+    socket.on("typing", ({ socketId, isTyping }: { socketId: string; isTyping: boolean }) => {
+      if (!socketId) return;
+      setTypingPeers((prev) => {
+        const next = { ...prev };
+        if (isTyping) {
+          next[socketId] = Date.now();
+        } else {
+          delete next[socketId];
+        }
+        return next;
+      });
     });
 
     socket.on("upload-status", (status: IncomingUpload) => {
@@ -126,9 +143,47 @@ export default function ShareRoom() {
         }
         return changed ? next : prev;
       });
-    }, 5000);
+      setTypingPeers((prev) => {
+        let changed = false;
+        const next: Record<string, number> = {};
+        for (const [k, t] of Object.entries(prev)) {
+          if (now - t > 4000) {
+            changed = true;
+            continue;
+          }
+          next[k] = t;
+        }
+        return changed ? next : prev;
+      });
+    }, 1500);
     return () => clearInterval(id);
   }, []);
+
+  const emitTyping = useCallback(
+    (isTyping: boolean) => {
+      if (!socketRef.current || !connected) return;
+      const now = Date.now();
+      const last = lastTypingSentRef.current;
+      // Throttle: only re-send "true" every 1.5s; always send "false" when state changes
+      if (isTyping && last.value && now - last.at < 1500) return;
+      if (!isTyping && !last.value) return;
+      lastTypingSentRef.current = { value: isTyping, at: now };
+      socketRef.current.emit("typing", { roomId, isTyping });
+    },
+    [connected, roomId],
+  );
+
+  const handleTextChange = (value: string) => {
+    setText(value);
+    if (value.trim().length > 0) {
+      emitTyping(true);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = setTimeout(() => emitTyping(false), 2000);
+    } else {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      emitTyping(false);
+    }
+  };
 
   useEffect(() => {
     if (feedRef.current) {
@@ -143,6 +198,9 @@ export default function ShareRoom() {
       roomId,
       data: { type: "text", content: text.trim() },
     });
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    socketRef.current.emit("typing", { roomId, isTyping: false });
+    lastTypingSentRef.current = { value: false, at: Date.now() };
     setText("");
     setSending(false);
   }, [text, roomId, connected]);
@@ -361,7 +419,7 @@ export default function ShareRoom() {
             <div className="p-4 flex flex-col gap-3">
               <textarea
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => handleTextChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type text or paste code here…"
                 rows={8}
@@ -481,6 +539,27 @@ export default function ShareRoom() {
             className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0"
             style={{ maxHeight: "calc(100vh - 280px)" }}
           >
+            {Object.keys(typingPeers).length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 animate-in fade-in duration-150">
+                <div className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {Object.keys(typingPeers).length === 1
+                    ? "Someone is typing…"
+                    : `${Object.keys(typingPeers).length} people typing…`}
+                </span>
+              </div>
+            )}
+
             {Object.values(incomingUploads).map((u) => {
               const pct = u.total > 0 ? (u.loaded / u.total) * 100 : 0;
               const previewName =
@@ -525,7 +604,7 @@ export default function ShareRoom() {
               );
             })}
 
-            {updates.length === 0 && Object.keys(incomingUploads).length === 0 ? (
+            {updates.length === 0 && Object.keys(incomingUploads).length === 0 && Object.keys(typingPeers).length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-16">
                 <div className="bg-primary/5 p-4 rounded-full">
                   <Send className="h-8 w-8 text-muted-foreground/30" />

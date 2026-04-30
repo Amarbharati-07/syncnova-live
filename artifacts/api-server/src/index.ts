@@ -78,6 +78,22 @@ io.on("connection", (socket) => {
   });
 
   socket.on(
+    "typing",
+    ({ roomId, isTyping }: { roomId: string; isTyping: boolean }) => {
+      if (!roomId) return;
+      socket.to(roomId).emit("typing", { socketId: socket.id, isTyping });
+    },
+  );
+
+  socket.on("disconnect", () => {
+    // Notify rooms this socket was in that they stopped typing
+    for (const room of socket.rooms) {
+      if (room === socket.id) continue;
+      socket.to(room).emit("typing", { socketId: socket.id, isTyping: false });
+    }
+  });
+
+  socket.on(
     "upload-status",
     ({
       roomId,
