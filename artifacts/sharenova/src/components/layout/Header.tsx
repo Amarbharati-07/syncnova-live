@@ -1,6 +1,7 @@
 import { Link } from "wouter";
-import { Terminal, Sun, Moon } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import logoMark from "@/assets/logo-mark.png";
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
@@ -10,9 +11,11 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center px-4">
         <Link href="/" className="flex items-center gap-2 mr-6 text-foreground hover:opacity-80 transition-opacity">
-          <div className="bg-primary/10 p-1.5 rounded-md">
-            <Terminal className="h-5 w-5 text-primary" />
-          </div>
+          <img
+            src={logoMark}
+            alt="ShareNova"
+            className="h-9 w-9 object-contain drop-shadow-[0_2px_8px_rgba(249,115,22,0.25)]"
+          />
           <div className="flex flex-col">
             <span className="font-bold font-mono tracking-tight leading-none">ShareNova</span>
             <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Share Code & Files Instantly</span>
