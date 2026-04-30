@@ -375,7 +375,7 @@ export default function ShareRoom() {
       <Header />
 
       <div className="border-b border-border bg-card/40 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-3 max-w-6xl flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="container mx-auto px-4 py-3 max-w-[1400px] flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex items-center gap-2 shrink-0">
             <div className={`w-2 h-2 rounded-full ${connected ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
             {connected ? (
@@ -406,31 +406,30 @@ export default function ShareRoom() {
         </div>
       </div>
 
-      <div className="flex-1 container mx-auto px-4 py-4 max-w-6xl flex flex-col lg:flex-row gap-4 min-h-0">
+      <div className="flex-1 container mx-auto px-4 py-4 max-w-[1400px] flex flex-col lg:flex-row gap-4 min-h-0">
 
         {/* LEFT — Sender Panel */}
-        <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3">
-          <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
+        <div className="w-full lg:flex-[2] min-w-0 flex flex-col gap-3">
+          <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col flex-1 min-h-[400px]">
+            <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2 shrink-0">
               <Send className="h-4 w-4 text-primary" />
               <span className="text-sm font-mono font-bold uppercase tracking-wider">Send Update</span>
             </div>
 
-            <div className="p-4 flex flex-col gap-3">
+            <div className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               <textarea
                 value={text}
                 onChange={(e) => handleTextChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type text or paste code here…"
-                rows={8}
-                className="w-full bg-background border border-border rounded-lg p-3 font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/50 leading-relaxed"
+                className="w-full flex-1 min-h-[300px] bg-background border border-border rounded-lg p-4 font-mono text-base resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/50 leading-relaxed"
               />
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2 shrink-0">
                 <span className="text-xs text-muted-foreground font-mono">Ctrl+Enter to send</span>
                 <button
                   onClick={sendText}
                   disabled={!text.trim() || !connected || sending}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-mono font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all"
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-mono font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-all"
                 >
                   {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   Send
@@ -523,7 +522,7 @@ export default function ShareRoom() {
         </div>
 
         {/* RIGHT — Live Feed */}
-        <div className="flex-1 flex flex-col min-h-0 bg-card border border-border rounded-xl overflow-hidden">
+        <div className="w-full lg:flex-[1] min-w-0 lg:min-w-[340px] flex flex-col min-h-0 bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <Wifi className="h-4 w-4 text-primary" />
