@@ -46,6 +46,19 @@ export default function ShareRoom() {
   } | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
 
+  interface IncomingUpload {
+    uploadId: string;
+    fileCount: number;
+    fileNames: string[];
+    loaded: number;
+    total: number;
+    speed: number;
+    eta: number;
+    state: "uploading" | "completed" | "cancelled" | "failed";
+    updatedAt: number;
+  }
+  const [incomingUploads, setIncomingUploads] = useState<Record<string, IncomingUpload>>({});
+
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/${roomId}` : `/share/${roomId}`;
 
   useEffect(() => {
@@ -71,12 +84,51 @@ export default function ShareRoom() {
       setUpdates((prev) => [...prev, update]);
     });
 
-    socket.on("room-cleared", () => setUpdates([]));
+    socket.on("room-cleared", () => {
+      setUpdates([]);
+      setIncomingUploads({});
+    });
+
+    socket.on("upload-status", (status: IncomingUpload) => {
+      if (!status?.uploadId) return;
+      if (status.state === "uploading") {
+        setIncomingUploads((prev) => ({
+          ...prev,
+          [status.uploadId]: { ...status, updatedAt: Date.now() },
+        }));
+      } else {
+        setIncomingUploads((prev) => {
+          const next = { ...prev };
+          delete next[status.uploadId];
+          return next;
+        });
+      }
+    });
 
     return () => {
       socket.disconnect();
     };
   }, [roomId]);
+
+  // Sweep stale incoming uploads (sender disconnected mid-upload)
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      setIncomingUploads((prev) => {
+        let changed = false;
+        const next: Record<string, IncomingUpload> = {};
+        for (const [k, v] of Object.entries(prev)) {
+          if (now - v.updatedAt > 15000) {
+            changed = true;
+            continue;
+          }
+          next[k] = v;
+        }
+        return changed ? next : prev;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (feedRef.current) {
@@ -106,8 +158,34 @@ export default function ShareRoom() {
     setUploading(true);
 
     const fileArray = Array.from(files);
+    const fileNames = fileArray.map((f) => f.name);
     const totalBytes = fileArray.reduce((sum, f) => sum + f.size, 0);
+    const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     setUploadProgress({ loaded: 0, total: totalBytes, speed: 0, eta: 0, fileCount: fileArray.length });
+
+    const broadcast = (
+      state: "uploading" | "completed" | "cancelled" | "failed",
+      loaded: number,
+      speed: number,
+      eta: number,
+    ) => {
+      socketRef.current?.emit("upload-status", {
+        roomId,
+        status: {
+          uploadId,
+          fileCount: fileArray.length,
+          fileNames,
+          loaded,
+          total: totalBytes,
+          speed,
+          eta,
+          state,
+        },
+      });
+    };
+
+    broadcast("uploading", 0, 0, 0);
 
     const formData = new FormData();
     fileArray.forEach((f) => formData.append("files", f));
@@ -120,6 +198,7 @@ export default function ShareRoom() {
         let lastTime = Date.now();
         let lastLoaded = 0;
         let smoothedSpeed = 0;
+        let lastBroadcast = 0;
 
         xhr.upload.addEventListener("progress", (e) => {
           if (!e.lengthComputable) return;
@@ -141,6 +220,11 @@ export default function ShareRoom() {
             eta,
             fileCount: fileArray.length,
           });
+
+          if (now - lastBroadcast >= 400) {
+            lastBroadcast = now;
+            broadcast("uploading", e.loaded, smoothedSpeed, eta);
+          }
         });
 
         xhr.addEventListener("load", () => {
@@ -163,12 +247,15 @@ export default function ShareRoom() {
         xhr.send(formData);
       });
 
+      broadcast("completed", totalBytes, 0, 0);
+
       socketRef.current.emit("send-data", {
         roomId,
         data: { type: "file", files: uploaded },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "File upload failed";
+      broadcast(msg === "Upload cancelled" ? "cancelled" : "failed", 0, 0, 0);
       if (msg !== "Upload cancelled") alert(msg);
     } finally {
       xhrRef.current = null;
@@ -394,7 +481,51 @@ export default function ShareRoom() {
             className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0"
             style={{ maxHeight: "calc(100vh - 280px)" }}
           >
-            {updates.length === 0 ? (
+            {Object.values(incomingUploads).map((u) => {
+              const pct = u.total > 0 ? (u.loaded / u.total) * 100 : 0;
+              const previewName =
+                u.fileNames.length === 1
+                  ? u.fileNames[0]
+                  : `${u.fileNames[0]} +${u.fileNames.length - 1} more`;
+              return (
+                <div
+                  key={u.uploadId}
+                  className="border-2 border-dashed border-primary/40 rounded-xl p-4 flex flex-col gap-3 bg-primary/5 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+                    <span className="text-xs font-mono text-foreground truncate">
+                      Someone is uploading {u.fileCount} file{u.fileCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <div className="text-xs font-mono text-muted-foreground truncate" title={u.fileNames.join(", ")}>
+                    {previewName}
+                  </div>
+
+                  <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border/50">
+                    <div
+                      className="h-full bg-primary transition-all duration-150 ease-out"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
+                    <span>
+                      {formatSize(u.loaded)} / {formatSize(u.total)}
+                    </span>
+                    <span className="text-foreground">{pct.toFixed(1)}%</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono text-muted-foreground/80">
+                    <span>{formatSpeed(u.speed)}</span>
+                    <span>ETA {formatEta(u.eta)}</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {updates.length === 0 && Object.keys(incomingUploads).length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-16">
                 <div className="bg-primary/5 p-4 rounded-full">
                   <Send className="h-8 w-8 text-muted-foreground/30" />

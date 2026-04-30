@@ -76,6 +76,29 @@ io.on("connection", (socket) => {
     roomHistory.delete(roomId);
     io.to(roomId).emit("room-cleared");
   });
+
+  socket.on(
+    "upload-status",
+    ({
+      roomId,
+      status,
+    }: {
+      roomId: string;
+      status: {
+        uploadId: string;
+        fileCount: number;
+        fileNames: string[];
+        loaded: number;
+        total: number;
+        speed: number;
+        eta: number;
+        state: "uploading" | "completed" | "cancelled" | "failed";
+      };
+    }) => {
+      if (!roomId || !status?.uploadId) return;
+      socket.to(roomId).emit("upload-status", status);
+    },
+  );
 });
 
 httpServer.listen(port, (err?: Error) => {
