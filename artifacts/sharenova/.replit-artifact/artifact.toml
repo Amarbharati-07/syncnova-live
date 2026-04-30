@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ShareNova"
+version = "1.0.0"
+id = "artifacts/sharenova"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23202
+
+[services.development]
+run = "pnpm --filter @workspace/sharenova run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sharenova", "run", "build" ]
+publicDir = "artifacts/sharenova/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23202"
+BASE_PATH = "/"

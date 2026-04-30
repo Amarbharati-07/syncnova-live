@@ -1,0 +1,193 @@
+Build a complete full-stack web application called "ShareNova".
+
+---
+
+## PROJECT GOAL
+
+ShareNova is a platform where users can:
+
+* Share code snippets instantly
+* Upload multiple files or ZIP folders
+* Generate a unique shareable URL
+* Allow others to open the link and view/download content
+
+This must work like codeshare.io but more advanced (code + files support).
+
+---
+
+## TECH STACK
+
+Frontend:
+
+* Next.js (App Router)
+* Tailwind CSS
+* Dark mode UI
+* Code editor: Monaco Editor
+
+Backend:
+
+* Node.js + Express
+
+Database:
+
+* MongoDB (Mongoose)
+
+Storage:
+
+* Local uploads folder (or AWS S3 optional)
+
+---
+
+## CORE FEATURES
+
+1. CODE SHARING:
+
+* Code editor (Monaco)
+* Language selector (JS, Python, etc.)
+* "Share Now" button
+* Save code to database
+* Generate unique ID using nanoid (6 characters)
+
+2. FILE SHARING:
+
+* Drag & Drop upload
+* Upload multiple files
+* Upload ZIP folders
+* Store files in /uploads folder
+* Save file metadata in database
+
+---
+
+## UNIQUE URL SYSTEM (VERY IMPORTANT)
+
+* Each share must generate a unique URL
+
+Example:
+https://sharenova.com/5XweqM
+
+* Do NOT use query params
+* Use dynamic routing (/[id])
+
+---
+
+## DATA STRUCTURE (MongoDB)
+
+Collection: shares
+
+Fields:
+
+* id (string, unique)
+* type ("code" or "file")
+* content (code text OR file paths)
+* language (for code)
+* createdAt
+* expiresAt (optional)
+
+---
+
+## BACKEND API
+
+POST /api/share/code
+POST /api/share/files
+GET /api/share/:id
+
+---
+
+## FRONTEND PAGES
+
+1. HOME PAGE (/)
+
+* Hero text:
+  "Share Code & Files Instantly"
+* Code editor section
+* File upload section
+* Share button
+* After clicking → generate link
+
+2. SHARE PAGE (/[id])
+
+* Fetch data using ID
+* If type = code:
+
+  * Show code with syntax highlighting
+* If type = file:
+
+  * Show file list
+  * Preview images/text
+  * Download button
+
+---
+
+## UI / UX DESIGN
+
+* Clean, modern UI (Stripe / Vercel style)
+* Dark theme default
+* Glassmorphism + gradient accents
+* Smooth animations
+* Responsive (mobile + desktop)
+
+---
+
+## EXTRA FEATURES (ADVANCED)
+
+* Copy link button
+* Expiry option (1 hour / 24 hours / permanent)
+* View counter
+* Delete share option
+* Loading animations
+
+---
+
+## SECURITY
+
+* Limit file size
+* Validate file types
+* Sanitize code input
+
+---
+
+## FOLDER STRUCTURE
+
+/frontend
+/app
+/components
+
+/backend
+/routes
+/models
+/controllers
+
+/uploads
+
+---
+
+## OUTPUT REQUIREMENTS
+
+* Full working code (frontend + backend)
+* Clean architecture
+* Ready to run locally
+* Include setup instructions
+
+---
+
+## IMPORTANT
+
+* Do NOT create a basic demo
+* Build a real scalable system
+* Each share must have unique URL
+* Opening same URL must always show same content
+
+---
+
+## BRANDING
+
+App Name: ShareNova
+
+Tagline:
+"Share Code & Files Instantly"
+
+---
+
+## GOAL
+
+Create a production-level application similar to codeshare.io but with additional file sharing capabilities.
