@@ -16,32 +16,8 @@ import { Loader2 } from "lucide-react";
 import { CreateCodeShareBodyExpiresIn } from "@workspace/api-client-react/src/generated/api.schemas";
 import { ShareSuccessDialog } from "./ShareSuccessDialog";
 
-const LANGUAGES = [
-  "plaintext",
-  "javascript",
-  "typescript",
-  "python",
-  "go",
-  "rust",
-  "java",
-  "cpp",
-  "csharp",
-  "ruby",
-  "php",
-  "swift",
-  "kotlin",
-  "sql",
-  "html",
-  "css",
-  "json",
-  "yaml",
-  "markdown",
-  "shell",
-];
-
 export function CodeEditor() {
   const [content, setContent] = useState("");
-  const [language, setLanguage] = useState("plaintext");
   const [title, setTitle] = useState("");
   const [expiresIn, setExpiresIn] = useState<CreateCodeShareBodyExpiresIn>("permanent");
   const [createdShareId, setCreatedShareId] = useState<string | null>(null);
@@ -53,7 +29,7 @@ export function CodeEditor() {
     if (!content.trim()) {
       toast({
         title: "Empty content",
-        description: "Please enter some code to share.",
+        description: "Please enter some text to share.",
         variant: "destructive",
       });
       return;
@@ -63,7 +39,7 @@ export function CodeEditor() {
       {
         data: {
           content,
-          language,
+          language: "plaintext",
           title: title.trim() || undefined,
           expiresIn,
         },
@@ -106,21 +82,6 @@ export function CodeEditor() {
             />
           </div>
           <div className="w-full sm:w-48">
-            <Label htmlFor="language" className="sr-only">Language</Label>
-            <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger id="language" className="bg-card font-mono text-sm" data-testid="select-language">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang} value={lang} className="font-mono text-sm">
-                    {lang}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-full sm:w-48">
             <Label htmlFor="expires" className="sr-only">Expires</Label>
             <Select value={expiresIn} onValueChange={(val) => setExpiresIn(val as CreateCodeShareBodyExpiresIn)}>
               <SelectTrigger id="expires" className="bg-card font-mono text-sm" data-testid="select-expiry">
@@ -138,7 +99,7 @@ export function CodeEditor() {
         <div className="border border-border rounded-md overflow-hidden h-[400px]">
           <Editor
             height="100%"
-            language={language}
+            language="plaintext"
             theme="vs-dark"
             value={content}
             onChange={(val) => setContent(val || "")}
