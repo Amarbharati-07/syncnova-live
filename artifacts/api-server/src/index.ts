@@ -3,6 +3,8 @@ import { Server as SocketIOServer } from "socket.io";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { nanoid } from "nanoid";
+import { db, roomUpdatesTable } from "@workspace/db";
+import { eq, asc } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -39,41 +41,71 @@ interface RoomUpdate {
   timestamp: number;
 }
 
-const roomHistory = new Map<string, RoomUpdate[]>();
-
 io.on("connection", (socket) => {
-  socket.on("join-room", (roomId: string) => {
+  socket.on("join-room", async (roomId: string) => {
+    if (!roomId) return;
     socket.join(roomId);
-    const history = roomHistory.get(roomId) || [];
-    socket.emit("room-history", history);
+    try {
+      const rows = await db
+        .select()
+        .from(roomUpdatesTable)
+        .where(eq(roomUpdatesTable.roomId, roomId))
+        .orderBy(asc(roomUpdatesTable.createdAt));
+
+      const history: RoomUpdate[] = rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        content: r.content ?? undefined,
+        files: r.files ?? undefined,
+        timestamp: r.createdAt.getTime(),
+      }));
+      socket.emit("room-history", history);
+    } catch (err) {
+      logger.error({ err, roomId }, "Failed to load room history");
+      socket.emit("room-history", []);
+    }
   });
 
   socket.on(
     "send-data",
-    ({
+    async ({
       roomId,
       data,
     }: {
       roomId: string;
       data: Omit<RoomUpdate, "id" | "timestamp">;
     }) => {
+      if (!roomId || !data?.type) return;
       const update: RoomUpdate = {
-        id: nanoid(8),
+        id: nanoid(10),
         timestamp: Date.now(),
         ...data,
       };
 
-      const history = roomHistory.get(roomId) || [];
-      history.push(update);
-      if (history.length > 50) history.splice(0, history.length - 50);
-      roomHistory.set(roomId, history);
+      try {
+        await db.insert(roomUpdatesTable).values({
+          id: update.id,
+          roomId,
+          type: update.type,
+          content: update.content ?? null,
+          files: update.files ?? null,
+          createdAt: new Date(update.timestamp),
+        });
+      } catch (err) {
+        logger.error({ err, roomId, updateId: update.id }, "Failed to persist room update");
+      }
 
       io.to(roomId).emit("receive-data", update);
     }
   );
 
-  socket.on("clear-room", (roomId: string) => {
-    roomHistory.delete(roomId);
+  socket.on("clear-room", async (roomId: string) => {
+    if (!roomId) return;
+    try {
+      await db.delete(roomUpdatesTable).where(eq(roomUpdatesTable.roomId, roomId));
+    } catch (err) {
+      logger.error({ err, roomId }, "Failed to clear room");
+    }
     io.to(roomId).emit("room-cleared");
   });
 
