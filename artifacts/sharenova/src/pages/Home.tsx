@@ -1,41 +1,56 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CodeEditor } from "@/components/share/CodeEditor";
-import { FileUploader } from "@/components/share/FileUploader";
+import { useLocation } from "wouter";
+import { nanoid } from "nanoid";
 import { Header } from "@/components/layout/Header";
-import { Code2, FileStack } from "lucide-react";
+import { ArrowRight, Zap, Link2, Users } from "lucide-react";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+
+  const createSession = () => {
+    const id = nanoid(6);
+    setLocation(`/share/${id}`);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <Header />
-      <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 max-w-3xl flex flex-col">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold font-mono tracking-tight mb-2">Create New Share</h1>
-          <p className="text-muted-foreground text-sm">Instantly share code snippets or files securely.</p>
+      <main className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-10">
+        <div className="flex flex-col items-center gap-4 max-w-xl">
+          <div className="bg-primary/10 text-primary p-4 rounded-2xl">
+            <Link2 className="h-10 w-10" />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold font-mono tracking-tight">
+            Send Once.<br />
+            <span className="text-primary">Share Instantly.</span>
+          </h1>
+          <p className="text-muted-foreground text-base max-w-sm">
+            Create one link, send code, text, or files — your friends see every update live without refreshing.
+          </p>
         </div>
 
-        <Tabs defaultValue="code" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 mb-6 bg-card border border-border h-12">
-            <TabsTrigger value="code" className="font-mono text-sm uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Code2 className="h-4 w-4 mr-2" />
-              Code Snippet
-            </TabsTrigger>
-            <TabsTrigger value="file" className="font-mono text-sm uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <FileStack className="h-4 w-4 mr-2" />
-              File Upload
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="code" className="mt-0">
-            <div className="bg-card/30 border border-border rounded-xl p-4 md:p-6 shadow-sm backdrop-blur-sm">
-              <CodeEditor />
-            </div>
-          </TabsContent>
-          <TabsContent value="file" className="mt-0">
-            <div className="bg-card/30 border border-border rounded-xl p-4 md:p-6 shadow-sm backdrop-blur-sm">
-              <FileUploader />
-            </div>
-          </TabsContent>
-        </Tabs>
+        <button
+          onClick={createSession}
+          className="group relative flex items-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground font-mono font-bold text-lg uppercase tracking-wider px-10 py-5 rounded-2xl shadow-lg shadow-primary/25 transition-all hover:scale-105 active:scale-100"
+        >
+          <Zap className="h-5 w-5" />
+          Share Now
+          <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+        </button>
+
+        <div className="flex flex-col sm:flex-row gap-6 text-sm text-muted-foreground font-mono">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-primary" />
+            One permanent link
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" />
+            Instant real-time sync
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Multiple viewers
+          </div>
+        </div>
       </main>
     </div>
   );

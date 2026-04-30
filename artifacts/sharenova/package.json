@@ -76,6 +76,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "monaco-editor": "^0.55.1"
+    "monaco-editor": "^0.55.1",
+    "nanoid": "^5.1.9",
+    "socket.io-client": "^4.8.3"
   }
 }
