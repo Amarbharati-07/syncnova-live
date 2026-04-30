@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { nanoid } from "nanoid";
 import { Header } from "@/components/layout/Header";
+import { HeroBackground } from "@/components/HeroBackground";
 import { ArrowRight, Zap, Link2, Users } from "lucide-react";
 
 export default function Home() {
@@ -14,7 +15,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <Header />
-      <main className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-10">
+      <main className="relative flex-1 flex flex-col items-center justify-center p-6 text-center gap-10 overflow-hidden">
+        <HeroBackground />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/60 via-background/30 to-background/70"
+        />
+        <div className="relative z-10 flex flex-col items-center gap-10 w-full">
         <div className="flex flex-col items-center gap-4 max-w-xl">
           <div className="bg-primary/10 text-primary p-4 rounded-2xl">
             <Link2 className="h-10 w-10" />
@@ -50,6 +57,7 @@ export default function Home() {
             <Users className="h-4 w-4 text-primary" />
             Multiple viewers
           </div>
+        </div>
         </div>
       </main>
     </div>
