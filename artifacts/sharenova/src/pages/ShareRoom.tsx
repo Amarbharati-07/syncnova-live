@@ -3,8 +3,8 @@ import { useParams } from "wouter";
 import { io, Socket } from "socket.io-client";
 import {
   Upload, X, Download, Loader2, Copy, Check, Users,
-  WifiOff, Wifi, Moon, Sun, FileText, ChevronRight,
-  Zap, Trash2,
+  Moon, Sun, FileText, ChevronRight,
+  Zap, Trash2, DownloadCloud, Keyboard,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -290,6 +290,20 @@ export default function ShareRoom() {
   const clearRoom = () => {
     if (!socketRef.current || !confirm("Clear all content from this room?")) return;
     socketRef.current.emit("clear-room", roomId);
+  };
+
+  const downloadAll = () => {
+    if (allFiles.length === 0) return;
+    allFiles.forEach((file, i) => {
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = file.url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, i * 250);
+    });
   };
 
   const typingCount = Object.keys(typingPeers).length;
@@ -699,6 +713,122 @@ export default function ShareRoom() {
           </div>
         )}
       </div>
+
+      {/* ── FOOTER STATUS BAR ─────────────────────────────────────────────── */}
+      <footer
+        className="relative z-50 shrink-0 h-[46px] flex items-center px-4 gap-0"
+        style={{
+          background: "rgba(2,6,23,0.85)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: "0 -1px 0 rgba(255,255,255,0.04), 0 -8px 24px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* LEFT — branding */}
+        <div className="hidden sm:flex items-center gap-3 shrink-0 pr-4 border-r border-white/6">
+          <div className="flex items-center gap-1.5">
+            <img src="/favicon.png" alt="" className="h-4 w-4 opacity-70" />
+            <span className="text-xs font-semibold text-white/50 tracking-tight">ShareNova</span>
+          </div>
+          <span className="text-xs text-white/20 font-mono hidden md:inline">Real-time code &amp; file sharing ⚡</span>
+        </div>
+
+        {/* CENTER — live status pills */}
+        <div className="flex items-center gap-1 px-4 flex-1 justify-center">
+          {/* Connection */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+              connected
+                ? "text-emerald-400 bg-emerald-500/8"
+                : "text-red-400 bg-red-500/8"
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                connected ? "bg-emerald-400 animate-pulse" : "bg-red-400"
+              }`}
+              style={connected ? { boxShadow: "0 0 6px rgba(52,211,153,0.8)" } : {}}
+            />
+            <span className="hidden sm:inline">{connected ? "Connected" : "Offline"}</span>
+          </div>
+
+          <div className="w-px h-3 bg-white/8 mx-0.5" />
+
+          {/* Sync state */}
+          {syncState === "syncing" && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-orange-400 bg-orange-500/8 anim-in">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="hidden sm:inline">Syncing…</span>
+            </div>
+          )}
+          {syncState === "synced" && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-emerald-400 bg-emerald-500/8 anim-in">
+              <Check className="h-3 w-3" />
+              <span className="hidden sm:inline">Synced</span>
+            </div>
+          )}
+          {syncState === "idle" && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-white/30">
+              <Zap className="h-3 w-3" />
+              <span className="hidden sm:inline">Auto-sync on</span>
+            </div>
+          )}
+
+          <div className="w-px h-3 bg-white/8 mx-0.5" />
+
+          {/* Users */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-white/40">
+            <Users className="h-3 w-3" />
+            <span>{userCount}</span>
+            <span className="hidden sm:inline">{userCount === 1 ? "online" : "online"}</span>
+          </div>
+        </div>
+
+        {/* RIGHT — action buttons + shortcut hint */}
+        <div className="flex items-center gap-1 shrink-0 pl-4 border-l border-white/6">
+          {/* Keyboard shortcut hint */}
+          <div className="hidden lg:flex items-center gap-1 mr-2 text-white/20">
+            <Keyboard className="h-3 w-3" />
+            <span className="text-xs font-mono">Ctrl+Enter upload</span>
+          </div>
+
+          {/* Copy link */}
+          <button
+            onClick={copyLink}
+            title="Copy session link"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-white/50 hover:text-white hover:bg-white/8 transition-all"
+          >
+            {copied
+              ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="hidden md:inline text-emerald-400">Copied!</span></>
+              : <><Copy className="h-3.5 w-3.5" /><span className="hidden md:inline">Copy Link</span></>}
+          </button>
+
+          {/* Download all */}
+          <button
+            onClick={downloadAll}
+            disabled={allFiles.length === 0}
+            title={allFiles.length === 0 ? "No files to download" : `Download all ${allFiles.length} file${allFiles.length !== 1 ? "s" : ""}`}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-white/50 hover:text-white hover:bg-white/8 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+          >
+            <DownloadCloud className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">
+              {allFiles.length > 0 ? `Download (${allFiles.length})` : "Download All"}
+            </span>
+          </button>
+
+          {/* Clear */}
+          <button
+            onClick={clearRoom}
+            disabled={allFiles.length === 0 && text.length === 0}
+            title="Clear all content"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-white/50 hover:text-red-400 hover:bg-red-500/8 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Clear</span>
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
