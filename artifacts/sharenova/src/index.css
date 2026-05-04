@@ -143,6 +143,7 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     height: 100%;
+    overflow-x: hidden; /* prevent horizontal scroll from off-screen mobile drawer */
     /* Deep space gradient always-on */
     background:
       radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,106,0,0.07) 0%, transparent 60%),

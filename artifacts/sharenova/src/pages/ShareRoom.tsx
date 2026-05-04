@@ -4,7 +4,7 @@ import { io, Socket } from "socket.io-client";
 import {
   Upload, X, Download, Loader2, Copy, Check, Users,
   Moon, Sun, FileText, ChevronRight,
-  Zap, Trash2, DownloadCloud, Keyboard,
+  Zap, Trash2, DownloadCloud, Keyboard, Files,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -71,7 +71,7 @@ export default function ShareRoom() {
   const [incomingUploads, setIncomingUploads] = useState<Record<string, IncomingUpload>>({});
   const [typingPeers, setTypingPeers] = useState<Record<string, number>>({});
   const [dragOver, setDragOver] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const suppressSyncRef = useRef(false);
   const textSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -378,16 +378,16 @@ export default function ShareRoom() {
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          {/* Sidebar toggle */}
+          {/* Sidebar toggle — always visible, triggers drawer on mobile / inline panel on desktop */}
           <button onClick={() => setSidebarOpen((v) => !v)}
-            className="p-2 rounded-xl glass text-white/60 hover:text-white transition-all hover:bg-white/10 lg:hidden">
+            className="p-2 rounded-xl glass text-white/60 hover:text-white transition-all hover:bg-white/10">
             <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${sidebarOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
       </nav>
 
       {/* ── STATUS STRIP ────────────────────────────────────────────────── */}
-      <div className="relative z-40 shrink-0 h-8 border-b border-white/5 flex items-center px-4 gap-5 text-xs"
+      <div className="relative z-40 shrink-0 h-8 border-b border-white/5 hidden md:flex items-center px-4 gap-5 text-xs"
         style={{ background: "rgba(2,6,23,0.6)" }}>
 
         {/* Sync state */}
@@ -433,10 +433,10 @@ export default function ShareRoom() {
       </div>
 
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
-      <div className="relative z-10 flex-1 flex min-h-0 overflow-hidden p-3 gap-3">
+      <div className="relative z-10 flex-1 flex min-h-0 overflow-hidden md:p-3 md:gap-3">
 
         {/* ── EDITOR PANEL ─────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-2xl overflow-hidden glass focus-glow"
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 md:rounded-2xl overflow-hidden glass focus-glow"
           style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.07), 0 8px 40px rgba(0,0,0,0.5)" }}>
 
           {/* Editor titlebar */}
@@ -540,9 +540,42 @@ export default function ShareRoom() {
           </div>
         </div>
 
-        {/* ── RIGHT SIDEBAR ─────────────────────────────────────────────── */}
+        {/* ── RIGHT SIDEBAR — mobile: fixed slide drawer / desktop: inline ── */}
+
+        {/* Mobile backdrop — tap to dismiss */}
         {sidebarOpen && (
-          <div className="w-72 shrink-0 flex flex-col gap-3 min-h-0 overflow-y-auto">
+          <div
+            className="fixed inset-0 z-40 md:hidden"
+            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(3px)" }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar panel — fixed drawer on mobile, inline on desktop */}
+        <div
+          className={
+            "flex flex-col gap-3 overflow-y-auto " +
+            "fixed top-0 right-0 h-full z-50 w-80 max-w-[88vw] p-3 " +
+            "transition-transform duration-300 ease-in-out " +
+            (sidebarOpen ? "translate-x-0 " : "translate-x-full ") +
+            "md:relative md:top-auto md:right-auto md:h-auto md:w-72 md:shrink-0 " +
+            "md:min-h-0 md:p-0 md:z-auto md:transition-none md:translate-x-0 md:flex"
+          }
+          style={{ background: "rgba(3,7,20,0.97)" }}
+        >
+          {/* Mobile-only drawer header */}
+          <div className="flex items-center justify-between pb-2 mb-1 border-b border-white/8 md:hidden">
+            <div className="flex items-center gap-2">
+              <Files className="h-4 w-4 text-orange-400" />
+              <span className="text-sm font-semibold text-white/75">Files &amp; Upload</span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
             {/* Upload card */}
             <div className="shrink-0 rounded-2xl overflow-hidden glass"
@@ -700,9 +733,9 @@ export default function ShareRoom() {
                           </p>
                         </div>
                         <a href={file.url} download={file.name}
-                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg hover:bg-orange-500/20 text-white/40 hover:text-orange-400"
+                          className="shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-all p-2 md:p-1.5 rounded-lg hover:bg-orange-500/20 text-white/40 hover:text-orange-400"
                           onClick={(e) => e.stopPropagation()}>
-                          <Download className="h-3.5 w-3.5" />
+                          <Download className="h-4 w-4 md:h-3.5 md:w-3.5" />
                         </a>
                       </div>
                     ))}
@@ -710,13 +743,50 @@ export default function ShareRoom() {
                 )}
               </div>
             </div>
-          </div>
-        )}
+        </div>
+      </div>
+
+      {/* Mobile FABs — only visible below md breakpoint */}
+      <div className="fixed bottom-6 right-4 z-50 flex flex-col items-end gap-3 md:hidden">
+        {/* Files drawer toggle */}
+        <button
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-full text-sm font-semibold text-white/80 active:scale-95 transition-all"
+          style={{
+            background: "rgba(255,255,255,0.09)",
+            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+          }}
+        >
+          <Files className="h-4 w-4 text-white/60" />
+          <span>Files{allFiles.length > 0 ? ` (${allFiles.length})` : ""}</span>
+          {allFiles.length > 0 && (
+            <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+          )}
+        </button>
+
+        {/* Upload FAB — primary action */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={!connected || uploading}
+          className="flex items-center gap-2.5 px-6 py-3.5 rounded-full text-sm font-semibold text-white active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            background: uploading
+              ? "rgba(255,106,0,0.4)"
+              : "linear-gradient(135deg, #FF6A00, #FF8C38)",
+            boxShadow: "0 0 28px rgba(255,106,0,0.45), 0 4px 20px rgba(0,0,0,0.4)",
+          }}
+        >
+          {uploading
+            ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Uploading…</span></>
+            : <><Upload className="h-4 w-4" /><span>Upload</span></>}
+        </button>
       </div>
 
       {/* ── FOOTER STATUS BAR ─────────────────────────────────────────────── */}
       <footer
-        className="relative z-50 shrink-0 h-[46px] flex items-center px-4 gap-0"
+        className="relative z-50 shrink-0 h-[46px] hidden md:flex items-center px-4 gap-0"
         style={{
           background: "rgba(2,6,23,0.85)",
           backdropFilter: "blur(20px)",
