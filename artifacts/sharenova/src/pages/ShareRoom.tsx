@@ -7,6 +7,7 @@ import {
   Zap, Trash2, DownloadCloud, Keyboard, Files,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { getApiBaseUrl, toAbsoluteApiUrl } from "@/lib/api-base-url";
 
 interface FileInfo { name: string; url: string; size: number; mimeType: string; }
 interface RoomUpdate { id: string; type: "text" | "file"; content?: string; files?: FileInfo[]; timestamp: number; }
@@ -330,13 +331,20 @@ export default function ShareRoom() {
         });
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            try { resolve((JSON.parse(xhr.responseText) as { files: FileInfo[] }).files); }
+            try {
+              const parsed = JSON.parse(xhr.responseText) as { files: FileInfo[] };
+              const normalized = parsed.files.map((file) => ({
+                ...file,
+                url: toAbsoluteApiUrl(file.url),
+              }));
+              resolve(normalized);
+            }
             catch { reject(new Error("Invalid response")); }
           } else { reject(new Error(`Upload failed (${xhr.status})`)); }
         });
         xhr.addEventListener("error", () => reject(new Error("Network error")));
         xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
-        xhr.open("POST", "/api/upload");
+        xhr.open("POST", `${getApiBaseUrl().replace(/\/$/, "")}/api/upload`);
         xhr.send(formData);
       });
 

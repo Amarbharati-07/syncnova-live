@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UploadCloud, X, Loader2, FileIcon } from "lucide-react";
 import type { CreateFileShareBodyExpiresIn } from "@workspace/api-client-react";
 import { ShareSuccessDialog } from "./ShareSuccessDialog";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export function FileUploader() {
   const [files, setFiles] = useState<File[]>([]);
@@ -72,7 +73,7 @@ export function FileUploader() {
       files.forEach((f) => formData.append("files", f));
       formData.append("expiresIn", expiresIn);
 
-      const res = await fetch("/api/share/files", {
+      const res = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/api/share/files`, {
         method: "POST",
         body: formData,
       });
