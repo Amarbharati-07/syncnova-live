@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { UploadCloud, X, Loader2, FileIcon } from "lucide-react";
-import { CreateFileShareBodyExpiresIn } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { CreateFileShareBodyExpiresIn } from "@workspace/api-client-react";
 import { ShareSuccessDialog } from "./ShareSuccessDialog";
 
 export function FileUploader() {

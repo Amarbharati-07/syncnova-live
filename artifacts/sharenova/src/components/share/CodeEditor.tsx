@@ -13,7 +13,7 @@ import {
 import { useCreateCodeShare } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { CreateCodeShareBodyExpiresIn } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { CreateCodeShareBodyExpiresIn } from "@workspace/api-client-react";
 import { ShareSuccessDialog } from "./ShareSuccessDialog";
 
 export function CodeEditor() {

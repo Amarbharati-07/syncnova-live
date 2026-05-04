@@ -1,7 +1,6 @@
 import { useLocation } from "wouter";
 import { nanoid } from "nanoid";
-import { HeroBackground } from "@/components/HeroBackground";
-import { ArrowRight, Zap, Link2, Users, Code2, Upload, Eye } from "lucide-react";
+import { ArrowRight, Upload, Zap } from "lucide-react";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -11,171 +10,121 @@ export default function Home() {
     setLocation(`/share/${id}`);
   };
 
+  const createUploadSession = () => {
+    const id = nanoid(6);
+    setLocation(`/share/${id}?upload=1`);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden relative" style={{ fontFamily: "'Inter', sans-serif" }}>
-
-      {/* Glow orbs */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-60 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full opacity-30"
-          style={{ background: "radial-gradient(ellipse, rgba(255,106,0,0.35) 0%, transparent 65%)", filter: "blur(80px)" }} />
-        <div className="absolute bottom-0 -left-40 w-80 h-80 rounded-full opacity-15"
-          style={{ background: "radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)", filter: "blur(60px)" }} />
-        <div className="absolute top-1/3 -right-20 w-64 h-64 rounded-full opacity-10"
-          style={{ background: "radial-gradient(circle, rgba(255,106,0,0.4) 0%, transparent 70%)", filter: "blur(50px)" }} />
-      </div>
-
-      {/* Animated network background */}
-      <div className="absolute inset-0 z-0">
-        <HeroBackground />
-      </div>
-
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 z-0 pointer-events-none"
-        style={{ background: "linear-gradient(to bottom, rgba(2,6,23,0.4) 0%, rgba(2,6,23,0.15) 40%, rgba(2,6,23,0.5) 100%)" }} />
-
-      {/* Navbar */}
-      <nav className="relative z-50 shrink-0 h-14 flex items-center px-6 glass-dark border-b border-white/6"
-        style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.04)" }}>
+    <div className="min-h-screen bg-slate-950 text-white">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <div className="flex items-center gap-2">
-          <img src="/favicon.png" alt="ShareNova"
-            className="h-7 w-7 drop-shadow-[0_0_10px_rgba(255,106,0,0.7)]" />
-          <span className="font-bold text-white tracking-tight"
-            style={{ textShadow: "0 0 20px rgba(255,106,0,0.4)" }}>ShareNova</span>
+          <img src="/favicon.png" alt="SyncNova" className="h-8 w-8" />
+          <span className="text-lg font-semibold tracking-tight">SyncNova</span>
         </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button onClick={createSession}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium text-white/70 glass hover:text-white transition-all">
-            <Zap className="h-3.5 w-3.5 text-orange-400" />
-            New Session
-          </button>
-        </div>
+        <button
+          onClick={createSession}
+          className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-400"
+        >
+          Start Sharing Now
+        </button>
       </nav>
 
-      {/* Hero */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
-
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8 anim-in"
-          style={{
-            background: "rgba(255,106,0,0.1)",
-            border: "1px solid rgba(255,106,0,0.25)",
-            color: "#FF9E4F",
-            boxShadow: "0 0 20px rgba(255,106,0,0.1)",
-          }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-          Real-time code & file sharing
+      <main className="mx-auto max-w-6xl px-6 pb-20 pt-10">
+        <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300">🟢 Connected</span>
+          <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-white/75">Live sync enabled</span>
+          <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-white/75">1 link ready</span>
         </div>
 
-        {/* Headline */}
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.05] anim-in"
-          style={{ animationDelay: "60ms" }}>
-          <span className="text-white">Send Once.</span>
-          <br />
-          <span style={{
-            background: "linear-gradient(135deg, #FF6A00 0%, #FF9E4F 60%, #FFD280 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            filter: "drop-shadow(0 0 40px rgba(255,106,0,0.35))",
-          }}>
-            Share Instantly.
-          </span>
+        <h1 className="max-w-5xl text-4xl font-bold leading-tight md:text-6xl">
+          Share Code &amp; Files Instantly Online ⚡
         </h1>
-
-        {/* Sub */}
-        <p className="text-white/50 text-lg max-w-md mb-12 leading-relaxed anim-in"
-          style={{ animationDelay: "100ms" }}>
-          One link. Live sync. No refresh needed.
-          <br />
-          Code, text, or files — your team sees it the moment you type.
+        <p className="mt-4 max-w-3xl text-base text-white/70 md:text-lg">
+          Start typing to share instantly ⚡ Upload files and share in one click. Live sync enabled.
         </p>
 
-        {/* CTA */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 mb-16 anim-in"
-          style={{ animationDelay: "140ms" }}>
-          <button onClick={createSession}
-            className="group relative flex items-center gap-3 text-white font-semibold text-base px-8 py-4 rounded-2xl transition-all"
-            style={{
-              background: "linear-gradient(135deg, #FF6A00, #FF8C38)",
-              boxShadow: "0 0 40px rgba(255,106,0,0.4), 0 4px 16px rgba(255,106,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                "0 0 60px rgba(255,106,0,0.55), 0 8px 24px rgba(255,106,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                "0 0 40px rgba(255,106,0,0.4), 0 4px 16px rgba(255,106,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)";
-            }}
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <button
+            onClick={createSession}
+            className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 font-semibold hover:bg-orange-400"
           >
-            <Zap className="h-5 w-5" />
-            Start Sharing
-            <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+            Start Sharing Now
+            <ArrowRight className="h-4 w-4" />
           </button>
-
-          <div className="text-xs text-white/25 font-mono">No signup · No install · Instant</div>
+          <span className="text-sm text-white/55">No login • Free • Instant link</span>
         </div>
 
-        {/* Feature pills */}
-        <div className="flex flex-wrap justify-center gap-3 anim-in" style={{ animationDelay: "180ms" }}>
-          {[
-            { icon: Link2, label: "Permanent link" },
-            { icon: Eye, label: "Live for all viewers" },
-            { icon: Code2, label: "Code & text editor" },
-            { icon: Upload, label: "Up to 10 GB files" },
-            { icon: Users, label: "Unlimited viewers" },
-          ].map(({ icon: Icon, label }) => (
-            <div key={label}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/55 font-medium glass">
-              <Icon className="h-3.5 w-3.5 text-orange-400/70" />
-              {label}
-            </div>
-          ))}
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-white/80">No Signup</span>
+          <span className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-white/80">Up to 10GB</span>
+          <span className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-white/80">Real-time Sync</span>
         </div>
 
-        {/* Editor preview mockup */}
-        <div className="mt-16 w-full max-w-2xl mx-auto rounded-2xl overflow-hidden anim-in"
-          style={{
-            animationDelay: "220ms",
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,106,0,0.08)",
-            background: "rgba(2,6,23,0.8)",
-            backdropFilter: "blur(20px)",
-          }}>
-          {/* Titlebar */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/6">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-500/60" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-              <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
-            </div>
-            <div className="flex-1 flex justify-center">
-              <span className="text-xs font-mono text-white/30">sharenova.app/share/abc123</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-mono">2 online</span>
-            </div>
+        <div className="mt-2 flex flex-wrap gap-3">
+          <button
+            onClick={createUploadSession}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-6 py-3 text-white/85 hover:bg-white/10"
+          >
+            <Upload className="h-4 w-4" />
+            Upload Files
+          </button>
+          <button
+            onClick={createSession}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-6 py-3 text-white/85 hover:bg-white/10"
+          >
+            <Zap className="h-4 w-4" />
+            Live Session
+          </button>
+        </div>
+
+        <section className="mt-14 space-y-8">
+          <div>
+            <h2 className="text-2xl font-semibold">Real-time code sharing</h2>
+            <p className="mt-3 text-white/75">
+              SyncNova is built for instant code collaboration. Open one live session link, start writing code, and everyone in the room sees changes as you type.
+              There is no send button and no waiting state. Whether you are reviewing a bug fix, pasting a config snippet, sharing shell output, or preparing quick interview notes,
+              you get a fast live surface that feels lightweight like Pastebin but collaborative like a modern doc editor.
+            </p>
           </div>
-          {/* Fake code */}
-          <div className="flex text-left" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "12px", lineHeight: "20px" }}>
-            <div className="px-3 pt-3 pb-3 select-none text-right min-w-[36px]" style={{ color: "rgba(255,255,255,0.15)" }}>
-              {[1,2,3,4,5,6,7].map(n => <div key={n}>{n}</div>)}
-            </div>
-            <div className="flex-1 p-3 overflow-hidden">
-              <div><span style={{ color: "#79b8ff" }}>const</span><span style={{ color: "#e1e4e8" }}> shareNova </span><span style={{ color: "#f97583" }}>=</span><span style={{ color: "#e1e4e8" }}> {"{"}</span></div>
-              <div><span style={{ color: "#e1e4e8" }}>  </span><span style={{ color: "#b392f0" }}>realtime</span><span style={{ color: "#e1e4e8" }}>: </span><span style={{ color: "#79b8ff" }}>true</span><span style={{ color: "#e1e4e8" }}>,</span></div>
-              <div><span style={{ color: "#e1e4e8" }}>  </span><span style={{ color: "#b392f0" }}>maxFileSize</span><span style={{ color: "#e1e4e8" }}>: </span><span style={{ color: "#9ecbff" }}>"10GB"</span><span style={{ color: "#e1e4e8" }}>,</span></div>
-              <div><span style={{ color: "#e1e4e8" }}>  </span><span style={{ color: "#b392f0" }}>viewers</span><span style={{ color: "#e1e4e8" }}>: </span><span style={{ color: "#9ecbff" }}>"unlimited"</span><span style={{ color: "#e1e4e8" }}>,</span></div>
-              <div><span style={{ color: "#e1e4e8" }}>  </span><span style={{ color: "#b392f0" }}>setup</span><span style={{ color: "#e1e4e8" }}>: </span><span style={{ color: "#9ecbff" }}>"none"</span><span style={{ color: "#e1e4e8" }}>,</span></div>
-              <div><span style={{ color: "#e1e4e8" }}>{"}"}</span><span style={{ color: "#e1e4e8" }}>;</span></div>
-              <div className="flex items-center gap-0.5">
-                <span style={{ color: "#e1e4e8" }}>&nbsp;</span>
-                <span className="inline-block w-2 h-4 bg-orange-400 animate-pulse rounded-sm opacity-80" />
-              </div>
-            </div>
+
+          <div>
+            <h2 className="text-2xl font-semibold">Upload and share files (ZIP supported)</h2>
+            <p className="mt-3 text-white/75">
+              Need to send binaries, screenshots, PDFs, or ZIP archives? SyncNova lets you upload files in the same live room so your team can access everything from one place.
+              This works well for product handoffs, frontend snapshots, bug reproduction bundles, and quick client deliveries.
+              Instead of switching between multiple tools, you keep code, text, and files in one simple workflow.
+            </p>
           </div>
-        </div>
+        </section>
+
+        <section className="mt-14">
+          <h2 className="text-2xl font-semibold">Frequently Asked Questions</h2>
+          <p className="mt-2 text-white/65">Quick answers about sharing code and files with SyncNova.</p>
+
+          <div className="mt-6 space-y-4">
+            <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <h3 className="text-lg font-semibold text-orange-300">Q1. How can I share code online instantly?</h3>
+              <p className="mt-2 text-white/75">
+                Open SyncNova, create a session, paste or type your code, and share the live link. Everyone who opens the link sees updates in real-time without refreshing.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <h3 className="text-lg font-semibold text-orange-300">Q2. Can I share ZIP files online with one link?</h3>
+              <p className="mt-2 text-white/75">
+                Yes. Upload ZIP files, documents, or images in the same room and share one URL for both text and file collaboration.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <h3 className="text-lg font-semibold text-orange-300">Q3. Do users need login to use this file sharing tool?</h3>
+              <p className="mt-2 text-white/75">
+                No login is required. You can start a live session instantly and collaborate in seconds.
+              </p>
+            </article>
+          </div>
+        </section>
       </main>
     </div>
   );

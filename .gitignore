@@ -47,3 +47,11 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local env files
+.env.local
+artifacts/*/.env.local
+
+# Runtime artifacts
+artifacts/api-server/data/
+artifacts/api-server/uploads/*.sqlite3

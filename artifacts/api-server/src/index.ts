@@ -46,8 +46,9 @@ interface RoomUpdate {
   timestamp: number;
 }
 
-// Track connected users per room
-const roomUsers = new Map<string, Set<string>>();
+// Track unique users per room with multi-tab support
+const roomUsers = new Map<string, Map<string, Set<string>>>();
+const socketRoomUser = new Map<string, { roomId: string; userId: string }>();
 
 function getUserCount(roomId: string): number {
   return roomUsers.get(roomId)?.size ?? 0;
@@ -58,23 +59,29 @@ function broadcastUserCount(roomId: string) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("join-room", async (roomId: string) => {
-    if (!roomId) return;
+  socket.on(
+    "join-room",
+    async ({ roomId, userId }: { roomId: string; userId: string }) => {
+      if (!roomId || !userId) return;
     socket.join(roomId);
 
-    // Track user in room
-    if (!roomUsers.has(roomId)) roomUsers.set(roomId, new Set());
-    roomUsers.get(roomId)!.add(socket.id);
-    broadcastUserCount(roomId);
+      // Track unique user with per-tab socket IDs
+      if (!roomUsers.has(roomId)) roomUsers.set(roomId, new Map());
+      const users = roomUsers.get(roomId)!;
+      if (!users.has(userId)) users.set(userId, new Set());
+      users.get(userId)!.add(socket.id);
+      socketRoomUser.set(socket.id, { roomId, userId });
+      broadcastUserCount(roomId);
 
-    // Send file history + current text state
-    const [history, textState] = await Promise.all([
-      loadRoom(roomId),
-      getTextState(roomId),
-    ]);
-    socket.emit("room-history", history);
-    socket.emit("text-state", { text: textState });
-  });
+      // Send file history + current text state
+      const [history, textState] = await Promise.all([
+        loadRoom(roomId),
+        getTextState(roomId),
+      ]);
+      socket.emit("room-history", history);
+      socket.emit("text-state", { text: textState });
+    },
+  );
 
   // Real-time text sync (auto-broadcast, no "send" button needed)
   socket.on(
@@ -147,17 +154,24 @@ io.on("connection", (socket) => {
     for (const room of socket.rooms) {
       if (room === socket.id) continue;
       socket.to(room).emit("typing", { socketId: socket.id, isTyping: false });
+    }
 
-      // Update user count
-      const users = roomUsers.get(room);
-      if (users) {
-        users.delete(socket.id);
-        if (users.size === 0) {
-          roomUsers.delete(room);
-        } else {
-          broadcastUserCount(room);
+    const roomUser = socketRoomUser.get(socket.id);
+    if (roomUser) {
+      const users = roomUsers.get(roomUser.roomId);
+      const sockets = users?.get(roomUser.userId);
+      if (sockets) {
+        sockets.delete(socket.id);
+        if (sockets.size === 0) {
+          users!.delete(roomUser.userId);
         }
       }
+      if (users && users.size === 0) {
+        roomUsers.delete(roomUser.roomId);
+      } else {
+        broadcastUserCount(roomUser.roomId);
+      }
+      socketRoomUser.delete(socket.id);
     }
   });
 });

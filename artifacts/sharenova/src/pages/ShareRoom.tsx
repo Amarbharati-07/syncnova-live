@@ -16,6 +16,23 @@ interface IncomingUpload {
   state: "uploading" | "completed" | "cancelled" | "failed"; updatedAt: number;
 }
 
+const LOCAL_USER_ID_KEY = "syncnova-user-id";
+
+function getOrCreateUserId() {
+  try {
+    const existing = window.localStorage.getItem(LOCAL_USER_ID_KEY);
+    if (existing) return existing;
+    const generated =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(LOCAL_USER_ID_KEY, generated);
+    return generated;
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 function formatSize(b: number) {
   if (b >= 1024 ** 3) return `${(b / 1024 ** 3).toFixed(1)} GB`;
   if (b >= 1024 ** 2) return `${(b / 1024 ** 2).toFixed(1)} MB`;
@@ -47,10 +64,32 @@ function fileIcon(name: string) {
   return "📄";
 }
 
+function applyTextWithCursorPreserved(
+  nextText: string,
+  textarea: HTMLTextAreaElement | null,
+  setText: (value: string) => void,
+) {
+  if (!textarea) {
+    setText(nextText);
+    return;
+  }
+
+  const start = textarea.selectionStart ?? 0;
+  const end = textarea.selectionEnd ?? start;
+  setText(nextText);
+
+  requestAnimationFrame(() => {
+    const maxPos = nextText.length;
+    const safeStart = Math.min(start, maxPos);
+    const safeEnd = Math.min(end, maxPos);
+    textarea.setSelectionRange(safeStart, safeEnd);
+  });
+}
+
 export default function ShareRoom() {
   const params = useParams<{ id: string }>();
   const roomId = params.id ?? "";
-  const { theme, toggle } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const socketRef = useRef<Socket | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -59,6 +98,7 @@ export default function ShareRoom() {
   const lineNumsRef = useRef<HTMLDivElement | null>(null);
 
   const [connected, setConnected] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [userCount, setUserCount] = useState(1);
   const [text, setText] = useState("");
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "synced">("idle");
@@ -72,6 +112,7 @@ export default function ShareRoom() {
   const [typingPeers, setTypingPeers] = useState<Record<string, number>>({});
   const [dragOver, setDragOver] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const userIdRef = useRef<string>("");
 
   const suppressSyncRef = useRef(false);
   const textSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,27 +126,59 @@ export default function ShareRoom() {
   const lineCount = text.split("\n").length;
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upload") === "1") {
+      setSidebarOpen(true);
+    }
+  }, []);
+
   // ── Socket ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const socket = io(window.location.origin, {
+    userIdRef.current = getOrCreateUserId();
+    const localSocketUrl =
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:3000"
+        : window.location.origin;
+    const socketBaseUrl = import.meta.env.VITE_SOCKET_URL ?? localSocketUrl;
+
+    const socket = io(socketBaseUrl, {
       path: "/api/socket.io",
       transports: ["websocket", "polling"],
+      withCredentials: false,
+      reconnection: true,
     });
     socketRef.current = socket;
 
-    socket.on("connect", () => { setConnected(true); socket.emit("join-room", roomId); });
-    socket.on("disconnect", () => setConnected(false));
+    socket.on("connect", () => {
+      setConnected(true);
+      setReconnecting(false);
+      socket.emit("join-room", { roomId, userId: userIdRef.current });
+    });
+    socket.on("disconnect", () => {
+      setConnected(false);
+      setReconnecting(true);
+    });
+    socket.io.on("reconnect_attempt", () => setReconnecting(true));
+    socket.io.on("reconnect", () => {
+      setConnected(true);
+      setReconnecting(false);
+    });
+    socket.io.on("reconnect_failed", () => {
+      setConnected(false);
+      setReconnecting(false);
+    });
     socket.on("user-count", ({ count }: { count: number }) => setUserCount(count));
 
     socket.on("text-state", ({ text: t }: { text: string }) => {
       suppressSyncRef.current = true;
-      setText(t);
+      applyTextWithCursorPreserved(t, textareaRef.current, setText);
       setTimeout(() => { suppressSyncRef.current = false; }, 50);
     });
 
     socket.on("text-sync", ({ text: t }: { text: string }) => {
       suppressSyncRef.current = true;
-      setText(t);
+      applyTextWithCursorPreserved(t, textareaRef.current, setText);
       setSyncState("synced");
       setTimeout(() => { suppressSyncRef.current = false; }, 50);
     });
@@ -175,6 +248,7 @@ export default function ShareRoom() {
       const t = setTimeout(() => setSyncState("idle"), 2500);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [syncState]);
 
   // Sync line numbers scroll with textarea
@@ -326,10 +400,10 @@ export default function ShareRoom() {
 
         {/* Logo */}
         <a href="/" className="flex items-center gap-2 shrink-0 mr-1 group">
-          <img src="/favicon.png" alt="ShareNova" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(255,106,0,0.6)]" />
+          <img src="/favicon.png" alt="SyncNova" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(255,106,0,0.6)]" />
           <span className="font-bold text-sm text-white hidden sm:inline tracking-tight"
             style={{ textShadow: "0 0 20px rgba(255,106,0,0.35)" }}>
-            ShareNova
+            SyncNova
           </span>
         </a>
 
@@ -342,7 +416,7 @@ export default function ShareRoom() {
             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
-          {connected ? "Live" : "Offline"}
+          {connected ? "🟢 Connected" : reconnecting ? "🟡 Reconnecting..." : "🔴 Offline"}
         </div>
 
         {/* URL bar (center) */}
@@ -373,7 +447,7 @@ export default function ShareRoom() {
           </div>
 
           {/* Theme */}
-          <button onClick={toggle}
+          <button onClick={toggleTheme}
             className="p-2 rounded-xl glass text-white/60 hover:text-white transition-all hover:bg-white/10">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
@@ -478,28 +552,27 @@ export default function ShareRoom() {
             </div>
 
             {/* Textarea */}
-            {text === "" ? (
-              <div className="relative flex-1 min-h-0">
-                <textarea
-                  ref={textareaRef}
-                  value={text}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  onScroll={handleScroll}
-                  spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
-                  className="absolute inset-0 w-full h-full resize-none border-0 focus:outline-none bg-transparent caret-orange-400 pl-4 pt-4 pr-4 pb-4"
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "13px",
-                    lineHeight: "22px",
-                    color: "rgba(230,237,243,0)",
-                    caretColor: "#f97316",
-                    tabSize: 2,
-                    whiteSpace: "pre",
-                    overflowWrap: "normal",
-                    overflowX: "auto",
-                  }}
-                />
-                {/* Placeholder overlay */}
+            <div className="relative flex-1 min-h-0">
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => handleTextChange(e.target.value)}
+                onScroll={handleScroll}
+                spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
+                className="absolute inset-0 w-full h-full resize-none border-0 focus:outline-none bg-transparent caret-orange-400 pl-4 pt-4 pr-4 pb-4 min-h-0"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "13px",
+                  lineHeight: "22px",
+                  color: "#e2e8f0",
+                  caretColor: "#f97316",
+                  tabSize: 2,
+                  whiteSpace: "pre",
+                  overflowWrap: "normal",
+                  overflowX: "auto",
+                }}
+              />
+              {text === "" && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-4 pb-16">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -515,28 +588,8 @@ export default function ShareRoom() {
                     <span>Code</span><span>·</span><span>Text</span><span>·</span><span>Commands</span><span>·</span><span>Anything</span>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={(e) => handleTextChange(e.target.value)}
-                onScroll={handleScroll}
-                spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
-                className="flex-1 resize-none border-0 focus:outline-none bg-transparent caret-orange-400 pl-4 pt-4 pr-4 pb-4 min-h-0"
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "13px",
-                  lineHeight: "22px",
-                  color: "#e2e8f0",
-                  caretColor: "#f97316",
-                  tabSize: 2,
-                  whiteSpace: "pre",
-                  overflowWrap: "normal",
-                  overflowX: "auto",
-                }}
-              />
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -799,7 +852,7 @@ export default function ShareRoom() {
         <div className="hidden sm:flex items-center gap-3 shrink-0 pr-4 border-r border-white/6">
           <div className="flex items-center gap-1.5">
             <img src="/favicon.png" alt="" className="h-4 w-4 opacity-70" />
-            <span className="text-xs font-semibold text-white/50 tracking-tight">ShareNova</span>
+            <span className="text-xs font-semibold text-white/50 tracking-tight">SyncNova</span>
           </div>
           <span className="text-xs text-white/20 font-mono hidden md:inline">Real-time code &amp; file sharing ⚡</span>
         </div>
@@ -820,7 +873,7 @@ export default function ShareRoom() {
               }`}
               style={connected ? { boxShadow: "0 0 6px rgba(52,211,153,0.8)" } : {}}
             />
-            <span className="hidden sm:inline">{connected ? "Connected" : "Offline"}</span>
+            <span className="hidden sm:inline">{connected ? "🟢 Connected" : reconnecting ? "🟡 Reconnecting..." : "🔴 Offline"}</span>
           </div>
 
           <div className="w-px h-3 bg-white/8 mx-0.5" />

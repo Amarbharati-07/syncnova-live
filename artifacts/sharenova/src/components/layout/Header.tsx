@@ -13,11 +13,11 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2 mr-6 text-foreground hover:opacity-80 transition-opacity">
           <img
             src={logoMark}
-            alt="ShareNova"
+            alt="SyncNova"
             className="h-9 w-9 object-contain drop-shadow-[0_2px_8px_rgba(249,115,22,0.25)]"
           />
           <div className="flex flex-col">
-            <span className="font-bold font-mono tracking-tight leading-none">ShareNova</span>
+            <span className="font-bold font-mono tracking-tight leading-none">SyncNova</span>
             <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Share Code & Files Instantly</span>
           </div>
         </Link>
